@@ -240,17 +240,13 @@ def Import_File(file_object):
 
     if(Elu_Magic == 17297504 and Elu_Version == 20500 or Elu_Version == 20500 or Elu_Version == 20498 or Elu_Version == 20497):
         if(Elu_Version == 20500):
-            for i in range(Mesh_Count):
-                Import_5014(elu, Mesh_Count)
+            Import_5014(elu, Mesh_Count)
         elif(Elu_Version == 20499):
-            for i in range(Mesh_Count):
-                Import_5013(elu, Elu_Version, Mesh_Count) # need fix 
+            Import_5013(elu, Elu_Version, Mesh_Count) # need fix 
         elif(Elu_Version == 20498):
-            for i in range(Mesh_Count):
-                Import_5012(elu, Elu_Version, Mesh_Count) # need fix  
+            Import_5012(elu, Elu_Version, Mesh_Count) # need fix  
         elif(Elu_Version == 20497):
-            for i in range(Mesh_Count):
-                Import_5011(elu, Elu_Version, Mesh_Count) # need fix 
+            Import_5011(elu, Elu_Version, Mesh_Count) # need fix 
     else:  
         print "Wrong file Type => Try again !"
 
