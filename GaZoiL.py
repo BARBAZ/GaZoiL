@@ -31,10 +31,10 @@ loop = 1
 
 # 1 file importation lifespan | Array must be cleaned between each file importation for the tool to operate properly
 
-Names = [] 
-Bones = [] 
-Joints_Angles = [] 
-Mesh_Ptr = om.MObjectArray() 
+Names = []
+Bones = []
+Joints_Angles = []
+Mesh_Ptr = om.MObjectArray()
 
 # Persistant | This Array Contains all Objects of the scene | Only New_Scene() can reset this List
 
