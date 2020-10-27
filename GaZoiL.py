@@ -88,7 +88,7 @@ def Delete_Joints_Mesh():
     for i in range(len(Names)):
         if(Names[i][5][0] == 0):
             cmds.delete(Names[i][2][0])
-
+            
 def Reparent_Joints():
     for i in range(len(Bones)):
         parent_index = Bones[i][0][0]
@@ -166,13 +166,13 @@ def Array_Copy(copied, new):
         new[i].append(elem4)
         new[i].append(elem5)
         
-def Detect_Duplicates(Name, file_object): 
+def Detect_Duplicates(Name):
     for i in range(len(World)):
         if(Name == World[i][2][0]):
-            print "this 3D Object Already exists inside Scene - - Jumping the next item"
-            Jump_Parse(file_object)
-        
-    
+            print "this 3D Object Already exists inside Scene - - Jumping to the next item"
+            return True
+    return False
+
 # Strings Operations #
 
 def Clean_Name(text):
@@ -221,47 +221,81 @@ def Main_Loop(run_count, loop):
             loop = 0
             pass
         elif(test0 > -1 or test1 > -1 or test2 > -1 or test3 > -1):
-            print "Fatal Error : VAR IQ < 0"
+            print "Answer Y/N"
     else:
         run_count += 1
         Open_File()
     return run_count, loop
     
-
 def Import_File(file_object):
     elu = file_object
     Elu_Magic = struct.unpack('<I', elu.read(4))[0]
     Elu_Version = struct.unpack('<I', elu.read(4))[0]
     Material_Count = struct.unpack('<I', elu.read(4))[0]
-    Mesh_Count = struct.unpack('<I', elu.read(4))[0]
-    create_list(Mesh_Count, Names, 6)
-    create_list(Mesh_Count, Bones, 2)
-    create_list(Mesh_Count, Joints_Angles, 6)
+    Object_Count = struct.unpack('<I', elu.read(4))[0] 
+    create_list(Object_Count, Names, 6)
+    create_list(Object_Count, Bones, 2)
+    create_list(Object_Count, Joints_Angles, 6)
 
     if(Elu_Magic == 17297504 and Elu_Version == 20500 or Elu_Version == 20500 or Elu_Version == 20498 or Elu_Version == 20497):
         if(Elu_Version == 20500):
-            Import_5014(elu, Mesh_Count)
+            for i in range(Object_Count):
+                Obj_Args = Object_Header1(elu)
+                print Obj_Args[0]
+                if(Detect_Duplicates(Obj_Args[0])):
+                    Jump_5014(elu)
+                else:
+                    Names[i][0].append(i)
+                    Names[i][1].append(Obj_Args[2])
+                    Names[i][2].append(Obj_Args[0])
+                    Names[i][3].append(Obj_Args[1])
+                    Import_5014(elu, i, Obj_Args[0])
+                    print "EOF"
+            Log_Arrays(Names)
+            Set_Transforms()
+            Set_Parent()
+            Generate_Joints()
+            Mesh_World_Parent()
+            Bones_World_Parent()
+            Delete_Joints_Mesh()
+            Reparent_Joints()
+            Set_Joints_Limit()
+            Array_Copy(Names, World)
+            World_Prt.copy(Mesh_Ptr)
+            Log_Arrays(World)
         elif(Elu_Version == 20499):
-            Import_5013(elu, Elu_Version, Mesh_Count) # need fix 
+            Object_Header1(file_object)
+            Import_5013(elu, Elu_Version, Object_Count) 
         elif(Elu_Version == 20498):
-            Import_5012(elu, Elu_Version, Mesh_Count) # need fix  
+            Object_Header0(file_object)
+            Import_5012(elu, Elu_Version, Object_Count)
         elif(Elu_Version == 20497):
-            Import_5011(elu, Elu_Version, Mesh_Count) # need fix 
+            Object_Header0(file_object)
+            Import_5011(elu, Elu_Version, Object_Count)
     else:  
         print "Wrong file Type => Try again !"
 
-def Jump_Parse(file_object, Elu_Version):
+def Object_Header0(file_object):
     elu = file_object
-    if(Elu_Version == 20500):
-        Jump_5014(elu)
-    elif(Elu_Version == 20499):
-        Jump_5013(elu)
-    elif(Elu_Version == 20498):
-        Jump_5012(elu)
-    elif(Elu_Version == 20497):
-        Jump_5011(elu)
-    else: 
-        print "Internal Error !"
+    Name_Length = struct.unpack('<I', elu.read(4))[0]
+    Name = elu.read(Name_Length)
+    Name = Clean_Name(Name)
+    Parent_Name_Length = struct.unpack('<I', elu.read(4))[0]
+    Parent_Name = elu.read(Parent_Name_Length)
+    Parent_Name = Clean_Name(Parent_Name)
+    Parent_Mesh_Index = struct.unpack('<I', elu.read(4))[0]
+    return Name, Parent_Name, Parent_Mesh_Index
+
+def Object_Header1(file_object):
+    elu = file_object
+    Name_Length = struct.unpack('<I', elu.read(4))[0]
+    Name = elu.read(Name_Length)
+    Name = Clean_Name(Name)
+    Parent_Mesh_Index = struct.unpack('<I', elu.read(4))[0] 
+    Parent_Name_Length = struct.unpack('<I', elu.read(4))[0]
+    Parent_Name = elu.read(Parent_Name_Length)
+    Parent_Name = Clean_Name(Parent_Name)
+    return Name, Parent_Name, Parent_Mesh_Index 
 
 def Import_5011(file_object, Elu_Version):
 
@@ -275,273 +309,235 @@ def Import_5013(file_object, Elu_Version):
 
     print "File type not supported"
 
-def Import_5014(file_object, Mesh_Count):
+def Import_5014(file_object, iterator, Object_Name):
     elu = file_object
-    Mesh_Index = 0
-    Mesh_Number = Mesh_Index + 1 # Variable init
-    for i in range(Mesh_Count):
-        Name_Length = struct.unpack('<I', elu.read(4))[0]
-        Name = elu.read(Name_Length)
-        Name = Clean_Name(Name)
-        #Detect_Duplicates(Name, elu)
-        print Name
-        Parent_Mesh_Index = struct.unpack('<I', elu.read(4))[0] 
-        Parent_Name_Length = struct.unpack('<I', elu.read(4))[0]
-        Parent_Name = elu.read(Parent_Name_Length)
-        Parent_Name = Clean_Name(Parent_Name)
-        LM = struct.unpack('<16f', elu.read(64))
-        Local_Matrix = om.MMatrix((
-                LM[0],LM[1],LM[2],LM[3],
-                LM[4],LM[5],LM[6],LM[7],
-                LM[8],LM[9],LM[10],LM[11],
-                LM[12],LM[13],LM[14],LM[15]
-            ))
+    i = iterator
+    Name = Object_Name
+    LM = struct.unpack('<16f', elu.read(64))
+    Local_Matrix = om.MMatrix((
+            LM[0],LM[1],LM[2],LM[3],
+            LM[4],LM[5],LM[6],LM[7],
+            LM[8],LM[9],LM[10],LM[11],
+            LM[12],LM[13],LM[14],LM[15]
+        ))
 
-        # Assigns the given variables to specific positions of the list
+    # Assigns the given variables to specific positions of the list
 
-        Names[i][0].append(Mesh_Index)
-        Names[i][1].append(Parent_Mesh_Index)
-        Names[i][2].append(Name)
-        Names[i][3].append(Parent_Name)
-        Names[i][4].append(Local_Matrix)
+    Names[i][4].append(Local_Matrix)
+    
+    # elu.seek(16, os.SEEK_CUR) debug
+
+    float0 = struct.unpack('<f', elu.read(4))[0]
+    float1 = struct.unpack('<f', elu.read(4))[0]
+    float2 = struct.unpack('<f', elu.read(4))[0]
+    float3 = struct.unpack('<f', elu.read(4))[0]
+
+    print float0 
+    print float1 
+    print float2 
+    print float3
+
+    Vertex_Position_Count = struct.unpack('<I', elu.read(4))[0]
+    Vertices = []
+
+    for j in range(Vertex_Position_Count):
+        vpx, vpy, vpz = struct.unpack('<3f', elu.read(12))
+        Vertices.append(om.MPoint(vpx, vpy, vpz))
+    
+    elu.seek(2, os.SEEK_CUR)
+
+    if(Vertex_Position_Count > 0):
+        Mesh_Flag = 1
+    else:
+        Mesh_Flag = 0
+
+    Names[i][5].append(Mesh_Flag)
+
+    Vertex_Textcoords = []
+    VTexcoords0 = []
+    VTexcoords1 = []
+    VTexcoords2 = []
+    Vertex_Textcoord_Count = struct.unpack('<I', elu.read(4))[0]
+    VTID = 0
+
+    for j in range(Vertex_Textcoord_Count):
+        vtx, vty, vtz = struct.unpack('<3f', elu.read(12))
+        Vertex_Textcoords.append((vtx, 1.0 - vty))
+        VTexcoords0.append(VTID)
+        VTexcoords1.append(vtx)
+        VTexcoords2.append(1.0 - vty) # flip y => if binary data contains 0,70 the end value will equal to 0,30
+        VTID = VTID + 1
+
+    Unknown_Count = struct.unpack('<I', elu.read(4))[0]
+    UKN_ARRAY=[]
+    create_list(Unknown_Count, UKN_ARRAY, 1)
+
+    for j in range(Unknown_Count):
+        UKN0 = struct.unpack('<f', elu.read(4))[0]
+        UKN1 = struct.unpack('<f', elu.read(4))[0]
+        UKN2 = struct.unpack('<f', elu.read(4))[0]
+        UKN_ARRAY[j][0].append((UKN0, UKN1, UKN2))
+
+    #Log_Arrays(UKN_ARRAY)
+
+    Unknown_Count = struct.unpack('<I', elu.read(4))[0]
+    UKN_ARRAY=[]
+    create_list(Unknown_Count, UKN_ARRAY, 1)
+
+    for j in range(Unknown_Count):
+        UKN0 = struct.unpack('<f', elu.read(4))[0]
+        UKN1 = struct.unpack('<f', elu.read(4))[0]
+        UKN2 = struct.unpack('<f', elu.read(4))[0]
+        UKN_ARRAY[j][0].append((UKN0, UKN1, UKN2))
+
+    #Log_Arrays(UKN_ARRAY)
+
+    Vertex_Normal_Count = struct.unpack('<I', elu.read(4))[0]
+    Vertex_Normals = []
+
+    for j in range(Vertex_Normal_Count):
+        vnx, vny, vnz = struct.unpack('<3f', elu.read(12))
+        Vertex_Normals.append((vnx, vny, vnz))
+
+    Unknown_Count = struct.unpack('<I', elu.read(4))[0] # Probably Faces Bi-Normals /  chunk >0 count only on mesh 
+    UKN_ARRAY=[]
+    create_list(Unknown_Count, UKN_ARRAY, 1)
+
+    for j in range(Unknown_Count):
+        UKN0 = struct.unpack('<f', elu.read(4))[0]
+        UKN1 = struct.unpack('<f', elu.read(4))[0]
+        UKN2 = struct.unpack('<f', elu.read(4))[0]
+        UKN3 = struct.unpack('<f', elu.read(4))[0]
+        UKN_ARRAY[j][0].append((UKN0, UKN1, UKN2, UKN3))
+
+    #Log_Arrays(UKN_ARRAY)
+
+    Unknown_Count = struct.unpack('<I', elu.read(4))[0]
+
+    for j in range(Unknown_Count):
+        elu.seek(12,os.SEEK_CUR)
+
+    Face_Count = struct.unpack('<I', elu.read(4))[0]
+    PolygonFaces = []
+    PolygonConnects = []
+    FaceID = []
+    FaceID_C = 0
+    L_Face_Vertex_IDs = []
+    L_Face_Vertex_IDs_C = 0
+    L_Face_Vertex_Texcoord_IDs = []
+
+    if(Face_Count > 0): 
+        Face_Index_Count = struct.unpack('<I', elu.read(4))[0]
+        Face_Count = struct.unpack('<I', elu.read(4))[0]
+
+        for j in range(Face_Count):
+            FaceID.append(FaceID_C)
+            FaceID_C = FaceID_C + 1
+            L_Face_Vertex_IDs_C = 0
+            Face_Vertex_Index_Count = struct.unpack('<I', elu.read(4))[0]
+            PolygonFaces.append(Face_Vertex_Index_Count)
+
+            for k in range(Face_Vertex_Index_Count):
+                L_Face_Vertex_IDs.append(L_Face_Vertex_IDs_C)
+                L_Face_Vertex_IDs_C = L_Face_Vertex_IDs_C + 1
+                Faces_Data, Textcoords, ukn0, ukn1, ukn2 = struct.unpack('<2HI2H', elu.read(12))
+                PolygonConnects.append(Faces_Data)
+                L_Face_Vertex_Texcoord_IDs.append(Textcoords)
+                elu.seek(2, os.SEEK_CUR)
+            elu.seek(2, os.SEEK_CUR)
+
+    else:
+        for j in range(Face_Count):
+            elu.seek(32, os.SEEK_CUR) # unknown
+            
+    Unknown_Count = struct.unpack('<I', elu.read(4))[0]
+
+    for j in range(Unknown_Count):
+        elu.seek(12,os.SEEK_CUR)
+
+    elu.seek(4,os.SEEK_CUR)
+    Blend_Vertex_Count = struct.unpack('<I', elu.read(4))[0]
+
+    for j in range(Blend_Vertex_Count):
+        Bones_Influences_Count = struct.unpack('<I', elu.read(4))[0]
         
-        # elu.seek(16, os.SEEK_CUR) debug
+        for j in range(Bones_Influences_Count):
+            elu.seek(2, os.SEEK_CUR)
+            elu.seek(6, os.SEEK_CUR)
+        
+    elu.seek(4, os.SEEK_CUR)
+    Vertex_Count = struct.unpack('<I', elu.read(4))[0]
+    Vertex_Indices = []
+    VTexcoords3 = []
 
-        float0 = struct.unpack('<f', elu.read(4))[0]
-        float1 = struct.unpack('<f', elu.read(4))[0]
-        float2 = struct.unpack('<f', elu.read(4))[0]
-        float3 = struct.unpack('<f', elu.read(4))[0]
-
-        print float0 
-        print float1 
-        print float2 
-        print float3
-
-        Vertex_Position_Count = struct.unpack('<I', elu.read(4))[0]
-        Vertices = []
-
-        for j in range(Vertex_Position_Count):
-            vpx, vpy, vpz = struct.unpack('<3f', elu.read(12))
-            Vertices.append(om.MPoint(vpx, vpy, vpz))
+    for j in range(Vertex_Count):
+        Vertex_Position_Index = Vertex_Normal_Index = Vertex_Textcoord_Index = Vertex_Unknown0_Index = Vertex_Unknown1_Index = 0
+        Vertex_Position_Index, Vertex_Normal_Index, Vertex_Textcoord_Index, Vertex_Unknown0_Index, Vertex_Unknown1_Index = struct.unpack('<3HIH', elu.read(12))
         
         elu.seek(2, os.SEEK_CUR)
+        Vertex_Indices.append((Vertex_Position_Index, Vertex_Normal_Index, Vertex_Textcoord_Index, Vertex_Unknown0_Index, Vertex_Unknown1_Index))
+        VTexcoords3.append(Vertex_Textcoord_Index)
 
-        if(Vertex_Position_Count > 0):
-            Mesh_Flag = 1
-        else:
-            Mesh_Flag = 0
+    Unknown_Count = struct.unpack('<I', elu.read(4))[0]
 
-        Names[i][5].append(Mesh_Flag)
+    for j in range(Unknown_Count):
+        elu.seek(64, os.SEEK_CUR)
 
-        Vertex_Textcoords = []
-        VTexcoords0 = []
-        VTexcoords1 = []
-        VTexcoords2 = []
-        Vertex_Textcoord_Count = struct.unpack('<I', elu.read(4))[0]
-        VTID = 0
+    for j in range(Unknown_Count):
+        elu.seek(2, os.SEEK_CUR)
 
-        for j in range(Vertex_Textcoord_Count):
-            vtx, vty, vtz = struct.unpack('<3f', elu.read(12))
-            Vertex_Textcoords.append((vtx, 1.0 - vty))
-            VTexcoords0.append(VTID)
-            VTexcoords1.append(vtx)
-            VTexcoords2.append(1.0 - vty) # flip y => if binary data contains 0,70 the end value will equal to 0,30
-            VTID = VTID + 1
+    Unknown_Count = struct.unpack('<I', elu.read(4))[0]
 
-        Unknown_Count = struct.unpack('<I', elu.read(4))[0]
-        UKN_ARRAY=[]
-        create_list(Unknown_Count, UKN_ARRAY, 1)
+    for j in range(Unknown_Count):
+        elu.seek(12,os.SEEK_CUR)
 
-        for j in range(Unknown_Count):
-            UKN0 = struct.unpack('<f', elu.read(4))[0]
-            UKN1 = struct.unpack('<f', elu.read(4))[0]
-            UKN2 = struct.unpack('<f', elu.read(4))[0]
-            UKN_ARRAY[j][0].append((UKN0, UKN1, UKN2))
+    Face_Index_Count = struct.unpack('<I', elu.read(4))[0]
+    Face_Count = int(Face_Index_Count / 3)
 
-        #Log_Arrays(UKN_ARRAY)
+    for j in range(Face_Index_Count):
+        elu.seek(2, os.SEEK_CUR)
+    
+    # Probably Bones constraint Max rotation angles | 6 floats (min angle -x, -y, -z) (max angle x, y, z)
 
-        Unknown_Count = struct.unpack('<I', elu.read(4))[0]
-        UKN_ARRAY=[]
-        create_list(Unknown_Count, UKN_ARRAY, 1)
-
-        for j in range(Unknown_Count):
-            UKN0 = struct.unpack('<f', elu.read(4))[0]
-            UKN1 = struct.unpack('<f', elu.read(4))[0]
-            UKN2 = struct.unpack('<f', elu.read(4))[0]
-            UKN_ARRAY[j][0].append((UKN0, UKN1, UKN2))
-
-        #Log_Arrays(UKN_ARRAY)
-
-        Vertex_Normal_Count = struct.unpack('<I', elu.read(4))[0]
-        Vertex_Normals = []
-
-        for j in range(Vertex_Normal_Count):
-            vnx, vny, vnz = struct.unpack('<3f', elu.read(12))
-            Vertex_Normals.append((vnx, vny, vnz))
-
-        Unknown_Count = struct.unpack('<I', elu.read(4))[0] # Probably Faces Bi-Normals /  chunk >0 count only on mesh 
-        UKN_ARRAY=[]
-        create_list(Unknown_Count, UKN_ARRAY, 1)
-
-        for j in range(Unknown_Count):
-            UKN0 = struct.unpack('<f', elu.read(4))[0]
-            UKN1 = struct.unpack('<f', elu.read(4))[0]
-            UKN2 = struct.unpack('<f', elu.read(4))[0]
-            UKN3 = struct.unpack('<f', elu.read(4))[0]
-            UKN_ARRAY[j][0].append((UKN0, UKN1, UKN2, UKN3))
-
-        #Log_Arrays(UKN_ARRAY)
-
-        Unknown_Count = struct.unpack('<I', elu.read(4))[0]
-
-        for j in range(Unknown_Count):
-            elu.seek(12,os.SEEK_CUR)
-
-        Face_Count = struct.unpack('<I', elu.read(4))[0]
-        PolygonFaces = []
-        PolygonConnects = []
-        FaceID = []
-        FaceID_C = 0
-        L_Face_Vertex_IDs = []
-        L_Face_Vertex_IDs_C = 0
-        L_Face_Vertex_Texcoord_IDs = []
-
-        if(Face_Count > 0): 
-            Face_Index_Count = struct.unpack('<I', elu.read(4))[0]
-            Face_Count = struct.unpack('<I', elu.read(4))[0]
-
-            for j in range(Face_Count):
-                FaceID.append(FaceID_C)
-                FaceID_C = FaceID_C + 1
-                L_Face_Vertex_IDs_C = 0
-                Face_Vertex_Index_Count = struct.unpack('<I', elu.read(4))[0]
-                PolygonFaces.append(Face_Vertex_Index_Count)
-
-                for k in range(Face_Vertex_Index_Count):
-                    L_Face_Vertex_IDs.append(L_Face_Vertex_IDs_C)
-                    L_Face_Vertex_IDs_C = L_Face_Vertex_IDs_C + 1
-                    Faces_Data, Textcoords, ukn0, ukn1, ukn2 = struct.unpack('<2HI2H', elu.read(12))
-                    PolygonConnects.append(Faces_Data)
-                    L_Face_Vertex_Texcoord_IDs.append(Textcoords)
-                    elu.seek(2, os.SEEK_CUR)
-                elu.seek(2, os.SEEK_CUR)
-
-        else:
-            for j in range(Face_Count):
-                elu.seek(32, os.SEEK_CUR) # unknown
-                
-        Unknown_Count = struct.unpack('<I', elu.read(4))[0]
-
-        for j in range(Unknown_Count):
-            elu.seek(12,os.SEEK_CUR)
-
-        elu.seek(4,os.SEEK_CUR)
-        Blend_Vertex_Count = struct.unpack('<I', elu.read(4))[0]
-
-        for j in range(Blend_Vertex_Count):
-            Bones_Influences_Count = struct.unpack('<I', elu.read(4))[0]
-            
-            for j in range(Bones_Influences_Count):
-                elu.seek(2, os.SEEK_CUR)
-                elu.seek(6, os.SEEK_CUR)
-            
-        elu.seek(4, os.SEEK_CUR)
-        Vertex_Count = struct.unpack('<I', elu.read(4))[0]
-        Vertex_Indices = []
-        VTexcoords3 = []
-
-        for j in range(Vertex_Count):
-            Vertex_Position_Index = Vertex_Normal_Index = Vertex_Textcoord_Index = Vertex_Unknown0_Index = Vertex_Unknown1_Index = 0
-            Vertex_Position_Index, Vertex_Normal_Index, Vertex_Textcoord_Index, Vertex_Unknown0_Index, Vertex_Unknown1_Index = struct.unpack('<3HIH', elu.read(12))
-            
-            elu.seek(2, os.SEEK_CUR)
-            Vertex_Indices.append((Vertex_Position_Index, Vertex_Normal_Index, Vertex_Textcoord_Index, Vertex_Unknown0_Index, Vertex_Unknown1_Index))
-            VTexcoords3.append(Vertex_Textcoord_Index)
-
-        Unknown_Count = struct.unpack('<I', elu.read(4))[0]
-
-        for j in range(Unknown_Count):
-            elu.seek(64, os.SEEK_CUR)
-
-        for j in range(Unknown_Count):
-            elu.seek(2, os.SEEK_CUR)
-
-        Unknown_Count = struct.unpack('<I', elu.read(4))[0]
-
-        for j in range(Unknown_Count):
-            elu.seek(12,os.SEEK_CUR)
-
-        Face_Index_Count = struct.unpack('<I', elu.read(4))[0]
-        Face_Count = int(Face_Index_Count / 3)
-
-        for j in range(Face_Index_Count):
-            elu.seek(2, os.SEEK_CUR)
-        
-        # Probably Bones constraint Max rotation angles | 6 floats (min angle -x, -y, -z) (max angle x, y, z)
-
-        Lim_X_P = struct.unpack('<f', elu.read(4))[0]
-        Lim_Y_P = struct.unpack('<f', elu.read(4))[0]
-        Lim_Z_P = struct.unpack('<f', elu.read(4))[0]
-        Lim_X_N = struct.unpack('<f', elu.read(4))[0]
-        Lim_Y_N = struct.unpack('<f', elu.read(4))[0]
-        Lim_Z_N = struct.unpack('<f', elu.read(4))[0]
-        Joints_Angles[i][0].append(Lim_X_P)
-        Joints_Angles[i][1].append(Lim_X_N)
-        Joints_Angles[i][2].append(Lim_Y_P)
-        Joints_Angles[i][3].append(Lim_Y_N)
-        Joints_Angles[i][4].append(Lim_Z_P)
-        Joints_Angles[i][5].append(Lim_Z_N)
+    Lim_X_P = struct.unpack('<f', elu.read(4))[0]
+    Lim_Y_P = struct.unpack('<f', elu.read(4))[0]
+    Lim_Z_P = struct.unpack('<f', elu.read(4))[0]
+    Lim_X_N = struct.unpack('<f', elu.read(4))[0]
+    Lim_Y_N = struct.unpack('<f', elu.read(4))[0]
+    Lim_Z_N = struct.unpack('<f', elu.read(4))[0]
+    Joints_Angles[i][0].append(Lim_X_P)
+    Joints_Angles[i][1].append(Lim_X_N)
+    Joints_Angles[i][2].append(Lim_Y_P)
+    Joints_Angles[i][3].append(Lim_Y_N)
+    Joints_Angles[i][4].append(Lim_Z_P)
+    Joints_Angles[i][5].append(Lim_Z_N)
 
 
     ##### Mesh Construct #####
 
-        if (Vertex_Position_Count > 0):
-            Mesh = meshFn.create(Vertices, PolygonFaces, PolygonConnects )
-        else:
-            Mesh = root_cube()
+    if (Vertex_Position_Count > 0):
+        Mesh = meshFn.create(Vertices, PolygonFaces, PolygonConnects )
+    else:
+        Mesh = root_cube()
 
-        Mesh_Ptr.append(Mesh)
+    Mesh_Ptr.append(Mesh)
 
     ##### Mesh Naming #####
 
-        DPNode = om.MFnDependencyNode(Mesh)
-        DPNode.setName(Name)
-        
+    DPNode = om.MFnDependencyNode(Mesh)
+    DPNode.setName(Name)
+    
     ##### UV Mapping #####
 
-        if (Vertex_Position_Count > 0):
-            meshFn.renameUVSet('map1', Name)
-            meshFn.setUVs(VTexcoords1, VTexcoords2, Name)
-            meshFn.assignUVs(PolygonFaces, L_Face_Vertex_Texcoord_IDs, uvSet=Name)
-        else:
-            pass
-        
-        Mesh_Index += 1
-        Mesh_Number += 1
+    if (Vertex_Position_Count > 0):
+        meshFn.renameUVSet('map1', Name)
+        meshFn.setUVs(VTexcoords1, VTexcoords2, Name)
+        meshFn.assignUVs(PolygonFaces, L_Face_Vertex_Texcoord_IDs, uvSet=Name)
+    else:
+        pass
 
-        print "Mesh Item Imported successfully ",Name
-        print "Switching to the next item"
-
-    ##### Post Parsing Operations #####
-
-    Log_Arrays(Names)
-    Set_Transforms()
-    Set_Parent()
-    Generate_Joints()
-    #Log_Arrays(Bones)
-    Mesh_World_Parent()
-    Bones_World_Parent()
-    Delete_Joints_Mesh()
-    Reparent_Joints()
-    Set_Joints_Limit()
-    Array_Copy(Names, World)
-    Log_Arrays(World)
-
-    print "No more mesh items to import -"
-    print "Closing file -"
-    print "Generating 3D Models in viewport ! ^^"
-
-    print "EOF"
+    print "Mesh Item Imported successfully ",Name
+    print "Switching to the next item"
 
 def Jump_5014(file_object): # Jumps to next 3d object in file
     elu = file_object
