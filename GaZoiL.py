@@ -173,6 +173,10 @@ def Detect_Duplicates(Name):
             return True
     return False
 
+def Flush_Array(array):
+    del array[:]
+    print array
+    
 # Strings Operations #
 
 def Clean_Name(text):
@@ -541,11 +545,7 @@ def Import_5014(file_object, iterator, Object_Name):
 
 def Jump_5014(file_object): # Jumps to next 3d object in file
     elu = file_object
-    print(elu.tell())
-    elu.seek(4, os.SEEK_CUR) # Parent_Mesh_Index
-    chunk_size = struct.unpack('<I', elu.read(4))[0]
-    elu.seek(chunk_size, os.SEEK_CUR) # Parent_Name
-    elu.seek(64, os.SEEK_CUR)
+    elu.seek(64, os.SEEK_CUR) # Local_Matrix
     elu.seek(16, os.SEEK_CUR)
     loops = struct.unpack('<I', elu.read(4))[0]
     for j in range(loops): # vtx_pos
@@ -599,7 +599,7 @@ def Jump_5014(file_object): # Jumps to next 3d object in file
     loops = struct.unpack('<I', elu.read(4))[0]
     for j in range(loops): # Faces Indices
         elu.seek(6, os.SEEK_CUR)
-    elu.seek(24, os.SEEK_CUR) # Joint Rotation Limit
+    elu.seek(24, os.SEEK_CUR) # Joint Rotation Limits
     print "=> 3D Object Jumped -"   
         
 ###########################################################################################################################################################
