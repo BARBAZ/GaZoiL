@@ -460,16 +460,26 @@ def Import_5014(file_object, iterator, Object_Name):
         elu.seek(12,os.SEEK_CUR)
 
     elu.seek(4,os.SEEK_CUR)
-    Blend_Vertex_Count = struct.unpack('<I', elu.read(4))[0]
+
+    Skinning_Data = []
+    Vertex_Index = -1
+    Blend_Vertex_Count = struct.unpack('<I', elu.read(4))[0] # Blend_Vertex_Count
+
 
     for j in range(Blend_Vertex_Count):
         Bones_Influences_Count = struct.unpack('<I', elu.read(4))[0]
+        Vertex_Index += 1
+        Skinning_Data.append([Vertex_Index])
         
-        for j in range(Bones_Influences_Count):
+        for k in range(Bones_Influences_Count):
             elu.seek(2, os.SEEK_CUR)
-            elu.seek(6, os.SEEK_CUR)
-        
+            Bones_Index = struct.unpack('<H', elu.read(2))[0]
+            Bones_Weight = struct.unpack('<f', elu.read(4))
+            Skinning_Data[j].append([Bones_Index, Bones_Weight])
+
+    Log_Arrays(Skinning_Data)
     elu.seek(4, os.SEEK_CUR)
+
     Vertex_Count = struct.unpack('<I', elu.read(4))[0]
     Vertex_Indices = []
     VTexcoords3 = []
@@ -615,6 +625,6 @@ while(loop):
 
 print "\n"
 print "EOS"
-#
+
 
 ###########################################################################################################################################################
