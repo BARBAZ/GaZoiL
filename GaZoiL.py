@@ -176,7 +176,7 @@ def Detect_Duplicates(Name):
 def Flush_Array(array):
     del array[:]
     print array
-    
+
 # Strings Operations #
 
 def Clean_Name(text):
@@ -463,21 +463,26 @@ def Import_5014(file_object, iterator, Object_Name):
 
     Skinning_Data = []
     Vertex_Index = -1
-    Blend_Vertex_Count = struct.unpack('<I', elu.read(4))[0] # Blend_Vertex_Count
 
+    Blend_Vertex_Count = struct.unpack('<I', elu.read(4))[0] # Blend_Vertex_Count
 
     for j in range(Blend_Vertex_Count):
         Bones_Influences_Count = struct.unpack('<I', elu.read(4))[0]
         Vertex_Index += 1
-        Skinning_Data.append([Vertex_Index])
+        Skinning_Data.append([])
+        Skinning_Data[Vertex_Index].append([Vertex_Index])
+        Skinning_Data[Vertex_Index].append([])
+        Skinning_Data[Vertex_Index].append([])
         
         for k in range(Bones_Influences_Count):
             elu.seek(2, os.SEEK_CUR)
-            Bones_Index = struct.unpack('<H', elu.read(2))[0]
-            Bones_Weight = struct.unpack('<f', elu.read(4))
-            Skinning_Data[j].append([Bones_Index, Bones_Weight])
-
+            Bone_Index = struct.unpack('<H', elu.read(2))[0]
+            Bone_Weight = struct.unpack('<f', elu.read(4))
+            Skinning_Data[Vertex_Index][1].append(Bone_Index)
+            Skinning_Data[Vertex_Index][2].append(Bone_Weight)
+            
     Log_Arrays(Skinning_Data)
+
     elu.seek(4, os.SEEK_CUR)
 
     Vertex_Count = struct.unpack('<I', elu.read(4))[0]
@@ -552,6 +557,7 @@ def Import_5014(file_object, iterator, Object_Name):
 
     print "Mesh Item Imported successfully ",Name
     print "Switching to the next item"
+    return Skinning_Data
 
 def Jump_5014(file_object): # Jumps to next 3d object in file
     elu = file_object
