@@ -29,18 +29,10 @@ loop = 1
 
 ##### Arrays #####
 
-# 1 file importation lifespan | Array must be cleaned between each file importation for the tool to operate properly
-
 Names = []
 Bones = []
 Joints_Angles = []
 Mesh_Ptr = om.MObjectArray()
-
-# Persistant | This Array Contains all Objects of the scene | Only New_Scene() can reset this List
-
-World = [] 
-World_Prt = om.MObjectArray() 
-
 
 ##### Constants #####
 
@@ -150,33 +142,6 @@ def create_list(itm_cnt, list, num_element): # Itm_cnt = numbers of items in lis
         index += 1
     return list
 
-def Array_Copy(copied, new):
-    for i in range(len(copied)):
-        new.append([])
-        elem0 = copied[i][0]
-        elem1 = copied[i][1]
-        elem2 = copied[i][2]
-        elem3 = copied[i][3]
-        elem4 = copied[i][4]
-        elem5 = copied[i][5]
-        new[i].append(elem0)
-        new[i].append(elem1)
-        new[i].append(elem2)
-        new[i].append(elem3)
-        new[i].append(elem4)
-        new[i].append(elem5)
-        
-def Detect_Duplicates(Name):
-    for i in range(len(World)):
-        if(Name == World[i][2][0]):
-            print "this 3D Object Already exists inside Scene - - Jumping to the next item"
-            return True
-    return False
-
-def Flush_Array(array):
-    del array[:]
-    print array
-
 # Strings Operations #
 
 def Clean_Name(text):
@@ -189,10 +154,6 @@ def Clean_Name(text):
     return text4
 
 # Misc #
-
-def User_Prompt(text):
-    Anwser = raw_input(text)
-    return Anwser
 
 def Open_File():
     fullpath = cmds.fileDialog2(fileMode=1)
@@ -208,29 +169,8 @@ def Open_File():
 # GaZoil #
 
 def Main_Loop(run_count, loop):
-    test0 = -1
-    test1 = -1
-    test2 = -1
-    test3 = -1
-    if(run_count > 0):
-        Run_Query = User_Prompt("Import more files ? Y/N")
-        test0 = Run_Query.find("Y")
-        test1 = Run_Query.find("y")
-        test2 = Run_Query.find("N")
-        test3 = Run_Query.find("n")
-        if(test0 > -1 or test1 > -1):
-            run_count += 1
-            Open_File()
-        elif(test2 > -1 or test3 > -1):
-            loop = 0
-            pass
-        elif(test0 > -1 or test1 > -1 or test2 > -1 or test3 > -1):
-            print "Answer Y/N"
-    else:
-        run_count += 1
-        Open_File()
-    return run_count, loop
-    
+    Open_File()    
+
 def Import_File(file_object):
     elu = file_object
     Elu_Magic = struct.unpack('<I', elu.read(4))[0]
@@ -246,15 +186,11 @@ def Import_File(file_object):
             for i in range(Object_Count):
                 Obj_Args = Object_Header1(elu)
                 print Obj_Args[0]
-                if(Detect_Duplicates(Obj_Args[0])):
-                    Jump_5014(elu)
-                else:
-                    Names[i][0].append(i)
-                    Names[i][1].append(Obj_Args[2])
-                    Names[i][2].append(Obj_Args[0])
-                    Names[i][3].append(Obj_Args[1])
-                    Import_5014(elu, i, Obj_Args[0])
-                    print "EOF"
+                Names[i][0].append(i)
+                Names[i][1].append(Obj_Args[2])
+                Names[i][2].append(Obj_Args[0])
+                Names[i][3].append(Obj_Args[1])
+                Import_5014(elu, i, Obj_Args[0])
             Log_Arrays(Names)
             Set_Transforms()
             Set_Parent()
@@ -263,10 +199,7 @@ def Import_File(file_object):
             Bones_World_Parent()
             Delete_Joints_Mesh()
             Reparent_Joints()
-            Set_Joints_Limit()
-            Array_Copy(Names, World)
-            World_Prt.copy(Mesh_Ptr)
-            Log_Arrays(World)
+            print "EOF"
         elif(Elu_Version == 20499):
             Object_Header1(file_object)
             Import_5013(elu, Elu_Version, Object_Count) 
@@ -557,77 +490,13 @@ def Import_5014(file_object, iterator, Object_Name):
 
     print "Mesh Item Imported successfully ",Name
     print "Switching to the next item"
-    return Skinning_Data
 
-def Jump_5014(file_object): # Jumps to next 3d object in file
-    elu = file_object
-    elu.seek(64, os.SEEK_CUR) # Local_Matrix
-    elu.seek(16, os.SEEK_CUR)
-    loops = struct.unpack('<I', elu.read(4))[0]
-    for j in range(loops): # vtx_pos
-        elu.seek(12, os.SEEK_CUR)
-    elu.seek(2, os.SEEK_CUR)
-    loops = struct.unpack('<I', elu.read(4))[0]
-    for j in range(loops): # vtx_txtcoords
-        elu.seek(12, os.SEEK_CUR)
-    loops = struct.unpack('<I', elu.read(4))[0]
-    for j in range(loops): # ukn
-        elu.seek(12, os.SEEK_CUR)
-    loops = struct.unpack('<I', elu.read(4))[0]
-    for j in range(loops): # ukn
-        elu.seek(12, os.SEEK_CUR)
-    loops = struct.unpack('<I', elu.read(4))[0]
-    for j in range(loops): # vtx_nor
-        elu.seek(12, os.SEEK_CUR)
-    loops = struct.unpack('<I', elu.read(4))[0]
-    for j in range(loops): # ukn
-        elu.seek(16, os.SEEK_CUR)
-    loops = struct.unpack('<I', elu.read(4))[0]
-    for j in range(loops): # ukn
-        elu.seek(12, os.SEEK_CUR)
-    loops0 = struct.unpack('<I', elu.read(4))[0] # Faces Data
-    if(loops0 > 0):
-        elu.seek(8, os.SEEK_CUR)
-        for j in range(loops0):
-            loops1 = struct.unpack('<I', elu.read(4))[0]
-            for k in range(loops1):
-                elu.seek(SKIPPED_LENGTH0, os.SEEK_CUR)
-            elu.seek(2, os.SEEK_CUR)
-    loops = struct.unpack('<I', elu.read(4))[0]
-    for j in range(loops): # ukn
-        elu.seek(12, os.SEEK_CUR)
-    elu.seek(4, os.SEEK_CUR)
-    loops = struct.unpack('<I', elu.read(4))[0]
-    for j in range(loops): # ukn
-        elu.seek(8, os.SEEK_CUR)
-    elu.seek(4, os.SEEK_CUR)
-    loops = struct.unpack('<I', elu.read(4))[0]
-    for j in range(loops): # vtx_indices
-        elu.seek(14, os.SEEK_CUR)
-    loops = struct.unpack('<I', elu.read(4))[0]
-    for j in range(loops): # ukn
-        elu.seek(64, os.SEEK_CUR)
-    for j in range(loops): # ukn
-        elu.seek(2, os.SEEK_CUR)
-    loops = struct.unpack('<I', elu.read(4))[0]
-    for j in range(loops): # ukn
-        elu.seek(12, os.SEEK_CUR)
-    loops = struct.unpack('<I', elu.read(4))[0]
-    for j in range(loops): # Faces Indices
-        elu.seek(6, os.SEEK_CUR)
-    elu.seek(24, os.SEEK_CUR) # Joint Rotation Limits
-    print "=> 3D Object Jumped -"   
-        
 ###########################################################################################################################################################
 
 ################################################################### Script instructions ###################################################################
 
 New_Scene()
-
-while(loop):
-    Args = Main_Loop(run_count, loop) # Importation functions entrypoint
-    run_count = Args[0]
-    loop = Args[1]
+Open_File()
 
 print "\n"
 print "EOS"
