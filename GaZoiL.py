@@ -4,20 +4,13 @@
 ###### Python Builtin modules #####
 
 import io
-import logging
 import os
-import re
 import struct
-import fileinput
-import math
-import pprint
 
 ##### Autodesk Maya's API Modules #####
 
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
-import maya.api.OpenMayaAnim as omanim
-import maya.api.OpenMayaRender as omrender
 
 ###########################################################################################################################################################
 
