@@ -10,6 +10,7 @@ import re
 import struct
 import fileinput
 import math
+import pprint
 
 ##### Autodesk Maya's API Modules #####
 
@@ -33,6 +34,10 @@ Names = []
 Bones = []
 Joints_Angles = []
 Mesh_Ptr = om.MObjectArray()
+
+##### Dictionnaries #####
+
+Skin_Clusters = {}
 
 ##### Constants #####
 
@@ -74,7 +79,6 @@ def Mesh_World_Parent():
 def Bones_World_Parent():
     for i in range(len(Bones)):
         cmds.parent(Bones[i][1][0],world=True)
-
 
 def Delete_Joints_Mesh():
     for i in range(len(Names)):
@@ -122,6 +126,19 @@ def Set_Joints_Limit():
         cmds.joint(Bones[i][1][0] , ly=(Joints_Angles[i][2][0] , Joints_Angles[i][3][0]))
         cmds.joint(Bones[i][1][0] , lz=(Joints_Angles[i][4][0] , Joints_Angles[i][5][0]))
 
+def Vertices_Weights():
+    for key in Skin_Clusters:
+        cmds.skinCluster(Bones[0][1][0] , key, name=To_Skin(key))
+        List = Skin_Clusters.get(key)
+        Log_Arrays(List)
+        for j in range(len(List)):
+            Vtx_Idx = List[j][0]
+            Bones_array = List[j][1]
+            Weights_array = List[j][2]
+            Bone_Count = len(List[j][1])
+            for k in range(Bone_Count):
+                cmds.skinPercent( To_Skin(key), Vtx_String(Vtx_Idx, key), transformValue=[(Bones[Bones_array[k]][1][0], Weights_array[k][0])])
+         
 ##### Pythonic Functions #####
 
 # Array Operations #
@@ -129,6 +146,7 @@ def Set_Joints_Limit():
 def Log_Arrays(array):
     print ""
     for i in range(len(array)):
+        
         element = array[i]
         print element
     print ""
@@ -152,6 +170,26 @@ def Clean_Name(text):
     Strings = (Object_string, text3)
     text4 = "".join(Strings)
     return text4
+
+def To_Bones(Name):
+    bone_suffix = "_bone"
+    strings = (Name, bone_suffix)
+    bone_name = "".join(strings)
+    return bone_name
+
+def To_Skin(Name):
+    skin_suffix = "_SC"
+    strings = (Name, skin_suffix)
+    skin_name = "".join(strings)
+    return skin_name
+
+def Vtx_String(vtx_idx, mesh):
+    vtx_string = 'vtx'
+    dot = "."
+    vtx_idx_string = str(vtx_idx)
+    strings = (mesh, dot, vtx_string, vtx_idx_string)
+    f_string = "".join(strings)
+    return f_string
 
 # Misc #
 
@@ -190,7 +228,7 @@ def Import_File(file_object):
                 Names[i][1].append(Obj_Args[2])
                 Names[i][2].append(Obj_Args[0])
                 Names[i][3].append(Obj_Args[1])
-                Import_5014(elu, i, Obj_Args[0])
+                Import_5014(elu, i, Obj_Args[0]) 
             Log_Arrays(Names)
             Set_Transforms()
             Set_Parent()
@@ -199,6 +237,7 @@ def Import_File(file_object):
             Bones_World_Parent()
             Delete_Joints_Mesh()
             Reparent_Joints()
+            Vertices_Weights()
             print "EOF"
         elif(Elu_Version == 20499):
             Object_Header1(file_object)
@@ -268,11 +307,6 @@ def Import_5014(file_object, iterator, Object_Name):
     float1 = struct.unpack('<f', elu.read(4))[0]
     float2 = struct.unpack('<f', elu.read(4))[0]
     float3 = struct.unpack('<f', elu.read(4))[0]
-
-    print float0 
-    print float1 
-    print float2 
-    print float3
 
     Vertex_Position_Count = struct.unpack('<I', elu.read(4))[0]
     Vertices = []
@@ -406,15 +440,21 @@ def Import_5014(file_object, iterator, Object_Name):
         Skinning_Data[Vertex_Index].append([Vertex_Index])
         Skinning_Data[Vertex_Index].append([])
         Skinning_Data[Vertex_Index].append([])
+        if(j == 1220):
+            print elu.tell()
+        if(j == 965):
+            print elu.tell()
         
         for k in range(Bones_Influences_Count):
             elu.seek(2, os.SEEK_CUR)
             Bone_Index = struct.unpack('<H', elu.read(2))[0]
-            Bone_Weight = struct.unpack('<f', elu.read(4))
+            Bone_Weight = struct.unpack('f', elu.read(4))
             Skinning_Data[Vertex_Index][1].append(Bone_Index)
             Skinning_Data[Vertex_Index][2].append(Bone_Weight)
             
-    Log_Arrays(Skinning_Data)
+    if(Names[i][5][0]):
+        Log_Arrays(Skinning_Data)
+        Skin_Clusters[Name] = Skinning_Data
 
     elu.seek(4, os.SEEK_CUR)
 
@@ -464,11 +504,11 @@ def Import_5014(file_object, iterator, Object_Name):
     Joints_Angles[i][4].append(Lim_Z_P)
     Joints_Angles[i][5].append(Lim_Z_N)
 
-
     ##### Mesh Construct #####
 
     if (Vertex_Position_Count > 0):
         Mesh = meshFn.create(Vertices, PolygonFaces, PolygonConnects )
+
     else:
         Mesh = root_cube()
 
