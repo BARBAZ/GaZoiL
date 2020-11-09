@@ -24,9 +24,7 @@ loop = 1
 ##### Arrays #####
 
 Names = []
-Bones = []
-Joints_Angles = []
-Mesh_Ptr = om.MObjectArray()
+Object_Ptr = om.MObjectArray()
 
 ##### Dictionnaries #####
 
@@ -58,31 +56,27 @@ def Set_Parent(): # Add Transforms relationship
         if(Names[i][1][0] != 0xFFFFFFFF):
             cmds.parent(Names[i][2][0] ,Names[i][3][0], relative=True)
 
+def Get_MObject(Name):
+    selection = om.MSelectionList()
+    selection.add(Name)
+    MObject = selection.getDependNode(0)
+    return MObject
+
 def Name_Bones(Name):
     string = "_bone"
     strings = (Name, string)
     Name = "".join(strings)
     return Name
 
-def Mesh_World_Parent():
+def Object_World_Parent():
+    Parents = []
     for i in range(len(Names)):
-        if(Names[i][1][0] != 0xFFFFFFFF):
+        hasParent = bool(cmds.listRelatives(Names[i][2][0], parent=True))
+        Parents.append(hasParent)
+    for i in range(len(Names)):
+        if(Parents[i]):
             cmds.parent(Names[i][2][0],world=True)
-
-def Bones_World_Parent():
-    for i in range(len(Bones)):
-        cmds.parent(Bones[i][1][0],world=True)
-
-def Delete_Joints_Mesh():
-    for i in range(len(Names)):
-        if(Names[i][5][0] == 0):
-            cmds.delete(Names[i][2][0])
             
-def Reparent_Joints():
-    for i in range(len(Bones)):
-        parent_index = Bones[i][0][0]
-        if(parent_index != 0xFFFFFFFF):
-            cmds.parent(Bones[i][1][0],Bones[parent_index][1][0])
 
 # 3D #
 
@@ -104,33 +98,20 @@ def root_cube():
 def Set_Transforms():
     for i in range(len(Names)):
         Transformation_Matrix = om.MTransformationMatrix(Names[i][4][0])
-        Transform_Node = om.MFnTransform(Mesh_Ptr[i])
+        Transform_Node = om.MFnTransform(Object_Ptr[i])
         Transform_Node.setTransformation(Transformation_Matrix)
-
-def Generate_Joints():
-    for i in range(len(Names)):
-            cmds.joint(Names[i][2][0], name=Name_Bones(Names[i][2][0]))
-            Bones[i][0].append(Names[i][1][0])
-            Bones[i][1].append(Name_Bones(Names[i][2][0]))
-
-def Set_Joints_Limit():
-    for i in range(len(Bones)):
-        cmds.joint(Bones[i][1][0] , lx=(Joints_Angles[i][0][0] , Joints_Angles[i][1][0]))
-        cmds.joint(Bones[i][1][0] , ly=(Joints_Angles[i][2][0] , Joints_Angles[i][3][0]))
-        cmds.joint(Bones[i][1][0] , lz=(Joints_Angles[i][4][0] , Joints_Angles[i][5][0]))
 
 def Vertices_Weights():
     for key in Skin_Clusters:
-        cmds.skinCluster(Bones[0][1][0] , key, name=To_Skin(key))
+        cmds.skinCluster(Names[0][2][0] , key, name=To_Skin(key))
         List = Skin_Clusters.get(key)
-        Log_Arrays(List)
         for j in range(len(List)):
             Vtx_Idx = List[j][0]
             Bones_array = List[j][1]
             Weights_array = List[j][2]
             Bone_Count = len(List[j][1])
             for k in range(Bone_Count):
-                cmds.skinPercent( To_Skin(key), Vtx_String(Vtx_Idx, key), transformValue=[(Bones[Bones_array[k]][1][0], Weights_array[k][0])])
+                cmds.skinPercent( To_Skin(key), Vtx_String(Vtx_Idx, key), transformValue=[(Names[Bones_array[k]][2][0], Weights_array[k][0])])
          
 ##### Pythonic Functions #####
 
@@ -139,7 +120,6 @@ def Vertices_Weights():
 def Log_Arrays(array):
     print ""
     for i in range(len(array)):
-        
         element = array[i]
         print element
     print ""
@@ -184,6 +164,13 @@ def Vtx_String(vtx_idx, mesh):
     f_string = "".join(strings)
     return f_string
 
+def To_Rad(float):
+    float_str = str(float)
+    rad_str = "deg"
+    string = (float_str, rad_str)
+    text = "".join(string)
+    return text
+
 # Misc #
 
 def Open_File():
@@ -199,9 +186,6 @@ def Open_File():
 
 # GaZoil #
 
-def Main_Loop(run_count, loop):
-    Open_File()    
-
 def Import_File(file_object):
     elu = file_object
     Elu_Magic = struct.unpack('<I', elu.read(4))[0]
@@ -209,8 +193,6 @@ def Import_File(file_object):
     Material_Count = struct.unpack('<I', elu.read(4))[0]
     Object_Count = struct.unpack('<I', elu.read(4))[0] 
     create_list(Object_Count, Names, 6)
-    create_list(Object_Count, Bones, 2)
-    create_list(Object_Count, Joints_Angles, 6)
 
     if(Elu_Magic == 17297504 and Elu_Version == 20500 or Elu_Version == 20500 or Elu_Version == 20498 or Elu_Version == 20497):
         if(Elu_Version == 20500):
@@ -223,13 +205,9 @@ def Import_File(file_object):
                 Names[i][3].append(Obj_Args[1])
                 Import_5014(elu, i, Obj_Args[0]) 
             Log_Arrays(Names)
+            Object_World_Parent()
             Set_Transforms()
             Set_Parent()
-            Generate_Joints()
-            Mesh_World_Parent()
-            Bones_World_Parent()
-            Delete_Joints_Mesh()
-            Reparent_Joints()
             Vertices_Weights()
             print "EOF"
         elif(Elu_Version == 20499):
@@ -433,10 +411,6 @@ def Import_5014(file_object, iterator, Object_Name):
         Skinning_Data[Vertex_Index].append([Vertex_Index])
         Skinning_Data[Vertex_Index].append([])
         Skinning_Data[Vertex_Index].append([])
-        if(j == 1220):
-            print elu.tell()
-        if(j == 965):
-            print elu.tell()
         
         for k in range(Bones_Influences_Count):
             elu.seek(2, os.SEEK_CUR)
@@ -446,7 +420,6 @@ def Import_5014(file_object, iterator, Object_Name):
             Skinning_Data[Vertex_Index][2].append(Bone_Weight)
             
     if(Names[i][5][0]):
-        Log_Arrays(Skinning_Data)
         Skin_Clusters[Name] = Skinning_Data
 
     elu.seek(4, os.SEEK_CUR)
@@ -490,26 +463,29 @@ def Import_5014(file_object, iterator, Object_Name):
     Lim_X_N = struct.unpack('<f', elu.read(4))[0]
     Lim_Y_N = struct.unpack('<f', elu.read(4))[0]
     Lim_Z_N = struct.unpack('<f', elu.read(4))[0]
-    Joints_Angles[i][0].append(Lim_X_P)
-    Joints_Angles[i][1].append(Lim_X_N)
-    Joints_Angles[i][2].append(Lim_Y_P)
-    Joints_Angles[i][3].append(Lim_Y_N)
-    Joints_Angles[i][4].append(Lim_Z_P)
-    Joints_Angles[i][5].append(Lim_Z_N)
+    Joints_Limits = []
+    Joints_Limits.append(Lim_X_N)
+    Joints_Limits.append(Lim_Y_N)
+    Joints_Limits.append(Lim_Z_N)
+    Joints_Limits.append(Lim_X_P)
+    Joints_Limits.append(Lim_Y_P)
+    Joints_Limits.append(Lim_Z_P)
+    print Joints_Limits
 
     ##### Mesh Construct #####
 
     if (Vertex_Position_Count > 0):
-        Mesh = meshFn.create(Vertices, PolygonFaces, PolygonConnects )
-
+        Object = meshFn.create(Vertices, PolygonFaces, PolygonConnects )
     else:
-        Mesh = root_cube()
-
-    Mesh_Ptr.append(Mesh)
+        #cmds.joint()
+        cmds.joint(name=Name)
+        Object = Get_MObject(Name)
+    
+    Object_Ptr.append(Object)
 
     ##### Mesh Naming #####
 
-    DPNode = om.MFnDependencyNode(Mesh)
+    DPNode = om.MFnDependencyNode(Object)
     DPNode.setName(Name)
     
     ##### UV Mapping #####
@@ -533,6 +509,5 @@ Open_File()
 
 print "\n"
 print "EOS"
-
 
 ###########################################################################################################################################################
