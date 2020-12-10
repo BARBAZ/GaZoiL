@@ -29,6 +29,7 @@ Object_Ptr = om.MObjectArray()
 ##### Dictionnaries #####
 
 Skin_Clusters = {}
+Joints = {}
 
 ##### Constants #####
 
@@ -62,12 +63,6 @@ def Get_MObject(Name):
     MObject = selection.getDependNode(0)
     return MObject
 
-def Name_Bones(Name):
-    string = "_bone"
-    strings = (Name, string)
-    Name = "".join(strings)
-    return Name
-
 def Object_World_Parent():
     Parents = []
     for i in range(len(Names)):
@@ -75,8 +70,8 @@ def Object_World_Parent():
         Parents.append(hasParent)
     for i in range(len(Names)):
         if(Parents[i]):
-            cmds.parent(Names[i][2][0],world=True)
-            
+            cmds.parent(Names[i][2][0], world=True)
+
 
 # 3D #
 
@@ -95,6 +90,11 @@ def root_cube():
     Mesh = meshFn.create(vertices, polygonFaces, polygonConnects )
     return Mesh
 
+def Freeze_Transformation():
+    for i in range(len(Names)):
+        if not(Names[i][5][0]):
+            cmds.makeIdentity(Names[i][2][0],a=True)
+
 def Set_Transforms():
     for i in range(len(Names)):
         Transformation_Matrix = om.MTransformationMatrix(Names[i][4][0])
@@ -112,7 +112,47 @@ def Vertices_Weights():
             Bone_Count = len(List[j][1])
             for k in range(Bone_Count):
                 cmds.skinPercent( To_Skin(key), Vtx_String(Vtx_Idx, key), transformValue=[(Names[Bones_array[k]][2][0], Weights_array[k][0])])
-         
+
+def Get_Joint_Angles(name):
+    x = cmds.joint(name, q=1, ax=1)
+    y = cmds.joint(name, q=1, ay=1)
+    z = cmds.joint(name, q=1, az=1)
+    return x, y, z
+            
+def Calc_Limits(x, y, z, List):
+    X_Limits = []
+    Y_Limits = []
+    Z_Limits = []
+    X_Limits.append(x - List[0])
+    X_Limits.append(x + List[3])
+    Y_Limits.append(y - List[1])
+    Y_Limits.append(y + List[4])
+    Z_Limits.append(z - List[2])
+    Z_Limits.append(z + List[5])
+    return X_Limits, Y_Limits, Z_Limits
+
+def Set_Limits():
+    for key in Joints:
+        List = Joints.get(key)
+        print key
+        Log_Arrays(List)
+        '''
+        Rot_XYZ = Get_Joint_Angles(key)
+        Log_Arrays(Rot_XYZ)
+        Joints = Calc_Limits(Floats[0], Floats[1], Floats[2], Limits_List)
+        Lim_X = Joints[0]
+        Lim_Y = Joints[1]
+        Lim_Z = Joints[2]
+        cmds.joint(key, e=1, lx=(Lim_X[0],Lim_X[1]))
+        cmds.joint(key, e=1, ly=(Lim_Y[0],Lim_Y[1]))
+        cmds.joint(key, e=1, lz=(Lim_Z[0],Lim_Z[1]))
+        '''
+def Orient_Joint():
+    for i in range(len(Names)):
+        if not(Names[i][5][0]):
+            cmds.joint(Names[i][2][0],e=True,zso=True,oj='yxz')
+
+
 ##### Pythonic Functions #####
 
 # Array Operations #
@@ -164,10 +204,11 @@ def Vtx_String(vtx_idx, mesh):
     f_string = "".join(strings)
     return f_string
 
-def To_Rad(float):
-    float_str = str(float)
+def Rad_Str(float):
+    int_offset = int(round(float))
+    int_str = str(int_offset)
     rad_str = "deg"
-    string = (float_str, rad_str)
+    string = (int_str, rad_str)
     text = "".join(string)
     return text
 
@@ -191,7 +232,7 @@ def Import_File(file_object):
     Elu_Magic = struct.unpack('<I', elu.read(4))[0]
     Elu_Version = struct.unpack('<I', elu.read(4))[0]
     Material_Count = struct.unpack('<I', elu.read(4))[0]
-    Object_Count = struct.unpack('<I', elu.read(4))[0] 
+    Object_Count = struct.unpack('<I', elu.read(4))[0]
     create_list(Object_Count, Names, 6)
 
     if(Elu_Magic == 17297504 and Elu_Version == 20500 or Elu_Version == 20500 or Elu_Version == 20498 or Elu_Version == 20497):
@@ -203,11 +244,12 @@ def Import_File(file_object):
                 Names[i][1].append(Obj_Args[2])
                 Names[i][2].append(Obj_Args[0])
                 Names[i][3].append(Obj_Args[1])
-                Import_5014(elu, i, Obj_Args[0]) 
-            Log_Arrays(Names)
+                Import_5014(elu, i, Obj_Args[0])
             Object_World_Parent()
-            Set_Transforms()
             Set_Parent()
+            Set_Transforms()
+            Freeze_Transformation()
+            Orient_Joint()
             Vertices_Weights()
             print "EOF"
         elif(Elu_Version == 20499):
@@ -220,7 +262,7 @@ def Import_File(file_object):
             Object_Header0(file_object)
             Import_5011(elu, Elu_Version, Object_Count)
     else:  
-        print "Wrong file Type => Try again !"
+        print "Wrong file Type => Internal Error !"
 
 def Object_Header0(file_object):
     elu = file_object
@@ -267,6 +309,7 @@ def Import_5014(file_object, iterator, Object_Name):
             LM[8],LM[9],LM[10],LM[11],
             LM[12],LM[13],LM[14],LM[15]
         ))
+    print Local_Matrix
 
     # Assigns the given variables to specific positions of the list
 
@@ -470,16 +513,16 @@ def Import_5014(file_object, iterator, Object_Name):
     Joints_Limits.append(Lim_X_P)
     Joints_Limits.append(Lim_Y_P)
     Joints_Limits.append(Lim_Z_P)
-    print Joints_Limits
+    Joints[Name] = Joints_Limits
 
     ##### Mesh Construct #####
 
     if (Vertex_Position_Count > 0):
         Object = meshFn.create(Vertices, PolygonFaces, PolygonConnects )
     else:
-        #cmds.joint()
         cmds.joint(name=Name)
         Object = Get_MObject(Name)
+        
     
     Object_Ptr.append(Object)
 
@@ -487,7 +530,7 @@ def Import_5014(file_object, iterator, Object_Name):
 
     DPNode = om.MFnDependencyNode(Object)
     DPNode.setName(Name)
-    
+        
     ##### UV Mapping #####
 
     if (Vertex_Position_Count > 0):
@@ -504,7 +547,7 @@ def Import_5014(file_object, iterator, Object_Name):
 
 ################################################################### Script instructions ###################################################################
 
-New_Scene()
+#New_Scene()
 Open_File()
 
 print "\n"
