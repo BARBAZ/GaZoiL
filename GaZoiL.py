@@ -72,6 +72,10 @@ def Object_World_Parent():
         if(Parents[i]):
             cmds.parent(Names[i][2][0], world=True)
 
+def Hide_Mesh():
+    for i in range(len(Names)):
+        if(Names[i][5][0]):
+            cmds.hide(Names[i][2][0])
 
 # 3D #
 
@@ -547,8 +551,9 @@ def Import_5014(file_object, iterator, Object_Name):
 
 ################################################################### Script instructions ###################################################################
 
-#New_Scene()
+New_Scene()
 Open_File()
+Hide_Mesh()
 
 print "\n"
 print "EOS"
