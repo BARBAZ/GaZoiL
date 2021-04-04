@@ -40,6 +40,8 @@ SKIPPED_LENGTH0 = 14
 # Assigned Objects #
 
 meshFn = om.MFnMesh()
+Yup_mul_0 = om.MMatrix((1,0,0,0,0,0,-1,0,0,1,0,0,0,0,0,1))
+Yup_mul_1 = om.MMatrix((1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1))
 
 ###########################################################################################################################################################
 
@@ -61,6 +63,13 @@ def Get_MObject(Name):
     selection = om.MSelectionList()
     selection.add(Name)
     MObject = selection.getDependNode(0)
+    return MObject
+
+def Get_Selected():
+    selection = om.MSelectionList()
+    selection.add(cmds.ls(sl=1)[0])
+    MObject = selection.getDependNode(0)
+    print ("selected %s"% (cmds.ls(sl=1)[0]))
     return MObject
 
 def Object_World_Parent():
@@ -101,7 +110,7 @@ def Freeze_Transformation():
 
 def Set_Transforms():
     for i in range(len(Names)):
-        Transformation_Matrix = om.MTransformationMatrix(Names[i][4][0])
+        Transformation_Matrix = om.MTransformationMatrix(Names[i][4][0])    
         Transform_Node = om.MFnTransform(Object_Ptr[i])
         Transform_Node.setTransformation(Transformation_Matrix)
 
@@ -252,9 +261,9 @@ def Import_File(file_object):
             Object_World_Parent()
             Set_Parent()
             Set_Transforms()
-            Freeze_Transformation()
-            Orient_Joint()
-            Vertices_Weights()
+            #Freeze_Transformation()
+            #Orient_Joint()
+            #Vertices_Weights()
             print "EOF"
         elif(Elu_Version == 20499):
             Object_Header1(file_object)
@@ -313,6 +322,7 @@ def Import_5014(file_object, iterator, Object_Name):
             LM[8],LM[9],LM[10],LM[11],
             LM[12],LM[13],LM[14],LM[15]
         ))
+    #Local_Matrix.__imul__(Yup_mul_0)
     print Local_Matrix
 
     # Assigns the given variables to specific positions of the list
@@ -519,7 +529,7 @@ def Import_5014(file_object, iterator, Object_Name):
     Joints_Limits.append(Lim_Z_P)
     Joints[Name] = Joints_Limits
 
-    ##### Mesh Construct #####
+    ##### Mesh / Bone Construct #####
 
     if (Vertex_Position_Count > 0):
         Object = meshFn.create(Vertices, PolygonFaces, PolygonConnects )
