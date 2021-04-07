@@ -20,6 +20,7 @@ import maya.api.OpenMaya as om
 
 run_count = 0
 loop = 1
+ffilters = "RS3 Models Files (*.elu);;All Files (*.*)"
 
 ##### Arrays #####
 
@@ -42,6 +43,7 @@ SKIPPED_LENGTH0 = 14
 meshFn = om.MFnMesh()
 Yup_mul_0 = om.MMatrix((1,0,0,0,0,0,-1,0,0,1,0,0,0,0,0,1))
 Yup_mul_1 = om.MMatrix((1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1))
+Matrix_Quat = om.MQuaternion(0.707,0,0,0.707)
 
 ###########################################################################################################################################################
 
@@ -88,6 +90,20 @@ def Hide_Mesh():
 
 # 3D #
 
+def Auto_Shader():
+    for i in range(len(Names)):
+        if(Names[i][5][0]):
+            cmds.shadingNode('lambert',asShader=1,name=Names[i][2][0].replace("Object","Shader"))
+            cmds.sets(r=1, nss=1, em=1, name=Names[i][2][0].replace("Object","ShadingGroup"))
+            strings0 = (Names[i][2][0].replace("Object","Shader"),".outColor")
+            strings1 = (Names[i][2][0].replace("Object","ShadingGroup"),".surfaceShader")
+            attr0 = "".join(strings0)
+            attr1 = "".join(strings1)
+            cmds.connectAttr(attr0,attr1,f=1)
+            cmds.select(Names[i][2][0])
+            cmds.sets(e=1,fe=Names[i][2][0].replace("Object","ShadingGroup"))
+
+
 def root_cube():
     vertices = [om.MPoint(-0.2, -0.2, 0.2),
                 om.MPoint(0.2, -0.2, 0.2), 
@@ -110,7 +126,15 @@ def Freeze_Transformation():
 
 def Set_Transforms():
     for i in range(len(Names)):
-        Transformation_Matrix = om.MTransformationMatrix(Names[i][4][0])    
+        Transformation_Matrix = om.MTransformationMatrix(Names[i][4][0])
+
+        ##### Debug #####
+        #Transformation_Matrix.setRotationOrientation(Matrix_Quat) # Rotate the whole object
+        #Transformation_Matrix.rotateBy(Matrix_Quat, 2) # rotate objects too ;.; 
+        #Transformation_Matrix.setRotation(Matrix_Quat) # rotate object weird result
+        #Transformation_Matrix.setRotationComponents(Matrix_Quat,1) #  KO	
+        #Transformation_Matrix.reorderRotation	(	6	) # Does nothing 
+
         Transform_Node = om.MFnTransform(Object_Ptr[i])
         Transform_Node.setTransformation(Transformation_Matrix)
 
@@ -228,7 +252,7 @@ def Rad_Str(float):
 # Misc #
 
 def Open_File():
-    fullpath = cmds.fileDialog2(fileMode=1)
+    fullpath = cmds.fileDialog2(fileMode=1, ff=ffilters)
     fullpath = str(fullpath[0])
     cnt = fullpath.count("/")
     splitpath = fullpath.split("/")
@@ -258,9 +282,11 @@ def Import_File(file_object):
                 Names[i][2].append(Obj_Args[0])
                 Names[i][3].append(Obj_Args[1])
                 Import_5014(elu, i, Obj_Args[0])
+            Auto_Shader()
             Object_World_Parent()
             Set_Parent()
             Set_Transforms()
+            #Object_World_Parent()
             #Freeze_Transformation()
             #Orient_Joint()
             #Vertices_Weights()
@@ -563,7 +589,7 @@ def Import_5014(file_object, iterator, Object_Name):
 
 New_Scene()
 Open_File()
-Hide_Mesh()
+#Hide_Mesh()
 
 print "\n"
 print "EOS"
