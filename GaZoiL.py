@@ -27,6 +27,10 @@ ffilters = "RS3 Models Files (*.elu);;All Files (*.*)"
 Names = []
 Object_Ptr = om.MObjectArray()
 
+Attrs_P2T  = ["coverage","translateFrame","rotateFrame","mirrorU","mirrorV","stagger","wrapU","wrapV","repeatUV","offset","rotateUV","noiseUV","vertexUvOne","vertexUvTwo","vertexUvThree","vertexCameraOne","outUV","outUvFilterSize"]
+Attrs_File = ["coverage","translateFrame","rotateFrame","mirrorU","mirrorV","stagger","wrapU","wrapV","repeatUV","offset","rotateUV","noiseUV","vertexUvOne","vertexUvTwo","vertexUvThree","vertexCameraOne",  "uv" ,  "uvFilterSize" , "outColor" ]
+Attrs_Shdr = ["color"]
+
 ##### Dictionnaries #####
 
 Skin_Clusters = {}
@@ -89,10 +93,12 @@ def Hide_Mesh():
             cmds.hide(Names[i][2][0])
 
 # 3D #
-
+'''
 def Auto_Shader():
+
     for i in range(len(Names)):
         if(Names[i][5][0]):
+            # Material mgmt
             cmds.shadingNode('lambert',asShader=1,name=Names[i][2][0].replace("Object","Shader"))
             cmds.sets(r=1, nss=1, em=1, name=Names[i][2][0].replace("Object","ShadingGroup"))
             strings0 = (Names[i][2][0].replace("Object","Shader"),".outColor")
@@ -102,7 +108,13 @@ def Auto_Shader():
             cmds.connectAttr(attr0,attr1,f=1)
             cmds.select(Names[i][2][0])
             cmds.sets(e=1,fe=Names[i][2][0].replace("Object","ShadingGroup"))
-
+            # Texture mgmt
+            # Albedo 
+            cmds.shadingNode('file', asTexture=True, isColorManaged=True)
+    
+            cmds.shadingNode('place2dTexture', asUtility=True)
+            #
+'''
 
 def root_cube():
     vertices = [om.MPoint(-0.2, -0.2, 0.2),
@@ -282,7 +294,7 @@ def Import_File(file_object):
                 Names[i][2].append(Obj_Args[0])
                 Names[i][3].append(Obj_Args[1])
                 Import_5014(elu, i, Obj_Args[0])
-            Auto_Shader()
+            #Auto_Shader()
             Object_World_Parent()
             Set_Parent()
             Set_Transforms()
@@ -589,7 +601,7 @@ def Import_5014(file_object, iterator, Object_Name):
 
 New_Scene()
 Open_File()
-#Hide_Mesh()
+Hide_Mesh()
 
 print "\n"
 print "EOS"
