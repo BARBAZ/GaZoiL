@@ -78,6 +78,9 @@ def Get_Selected():
     print ("selected %s"% (cmds.ls(sl=1)[0]))
     return MObject
 
+def Name_Selected():
+    return cmds.ls(sl=1)[0]
+    
 def Object_World_Parent():
     Parents = []
     for i in range(len(Names)):
