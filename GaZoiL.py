@@ -45,9 +45,6 @@ SKIPPED_LENGTH0 = 14
 # Assigned Objects #
 
 meshFn = om.MFnMesh()
-Yup_mul_0 = om.MMatrix((1,0,0,0,0,0,-1,0,0,1,0,0,0,0,0,1))
-Yup_mul_1 = om.MMatrix((1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1))
-Matrix_Quat = om.MQuaternion(0.707,0,0,0.707)
 
 ###########################################################################################################################################################
 
@@ -70,6 +67,12 @@ def Get_MObject(Name):
     selection.add(Name)
     MObject = selection.getDependNode(0)
     return MObject
+
+def Get_DAG(Name):
+    selection = om.MSelectionList()
+    selection.add(Name)
+    MDAG = selection.getDagPath(0)
+    return MDAG
 
 def Get_Selected():
     selection = om.MSelectionList()
@@ -142,14 +145,6 @@ def Freeze_Transformation():
 def Set_Transforms():
     for i in range(len(Names)):
         Transformation_Matrix = om.MTransformationMatrix(Names[i][4][0])
-
-        ##### Debug #####
-        #Transformation_Matrix.setRotationOrientation(Matrix_Quat) # Rotate the whole object
-        #Transformation_Matrix.rotateBy(Matrix_Quat, 2) # rotate objects too ;.; 
-        #Transformation_Matrix.setRotation(Matrix_Quat) # rotate object weird result
-        #Transformation_Matrix.setRotationComponents(Matrix_Quat,1) #  KO	
-        #Transformation_Matrix.reorderRotation	(	6	) # Does nothing 
-
         Transform_Node = om.MFnTransform(Object_Ptr[i])
         Transform_Node.setTransformation(Transformation_Matrix)
 
@@ -308,7 +303,7 @@ def Import_File(file_object):
             print "EOF"
         elif(Elu_Version == 20499):
             Object_Header1(file_object)
-            Import_5013(elu, Elu_Version, Object_Count) 
+            Import_5013(elu, Elu_Version, Object_Count)
         elif(Elu_Version == 20498):
             Object_Header0(file_object)
             Import_5012(elu, Elu_Version, Object_Count)
@@ -383,6 +378,7 @@ def Import_5014(file_object, iterator, Object_Name):
     for j in range(Vertex_Position_Count):
         vpx, vpy, vpz = struct.unpack('<3f', elu.read(12))
         Vertices.append(om.MPoint(vpx, vpy, vpz))
+
     
     elu.seek(2, os.SEEK_CUR)
 
