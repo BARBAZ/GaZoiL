@@ -1,5 +1,6 @@
-
 ###################################################################### Preprocessing ######################################################################
+
+init = globals().keys()
 
 ###### Python Builtin modules #####
 
@@ -54,7 +55,18 @@ meshFn = om.MFnMesh()
 
 # UI #
 
-def New_Scene(): # Allowed for debugging | Remove before Production
+def Clean():
+    close = globals().keys()
+    index = len(close)
+    for i in range(len(close)):
+        index -= 1
+        if(close[index] not in init):
+            if(close[index] != 'init' and close[index] != 'close' and close[index] != 'Clean'):
+                string = close[index]
+                del globals()[string[:]]
+
+    print "Objects definitions removed from RAM !"
+    del close
     cmds.file(newFile=True, force=True)
 
 def Set_Parent(): # Add Transforms relationship
@@ -598,7 +610,6 @@ def Import_5014(file_object, iterator, Object_Name):
 
 ################################################################### Script instructions ###################################################################
 
-New_Scene()
 Open_File()
 Hide_Mesh()
 
